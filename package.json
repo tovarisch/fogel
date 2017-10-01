@@ -1,0 +1,25 @@
+{
+  "name": "ogedl",
+  "version": "0.0.1",
+  "description": "Open Game Entity Description Language",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/tovarisch/ogedl.git"
+  },
+  "author": "Leonid Schekotihin",
+  "license": "GPL-3.0",
+  "bugs": {
+    "url": "https://github.com/tovarisch/ogedl/issues"
+  },
+  "homepage": "https://github.com/tovarisch/ogedl#readme",
+  "dependencies": {
+    "async": "^2.5.0",
+    "colors": "^1.1.2",
+    "lodash": "^4.17.4",
+    "strip-json-comments": "^2.0.1"
+  }
+}
