@@ -1,0 +1,27 @@
+{
+    __name: "exampleType"
+    "field_1": {
+        "type": "float"
+    },
+    "field_2": {
+        "type": "uint8",
+        "enumerates': "exampleList",
+    },
+    "field_3"  : {
+        "type" : "reference",
+        "id"   : "exampleComponent"
+    },
+    "field_4"  : {
+        "type" : "derivedReference",
+        "id"   : "baseComponent"
+    },
+    "field_4"  : {
+        "type" : "list",
+        "item" : "string"
+    },
+    "field_5"  : {
+        "type": "list",
+        "item": "reference",
+        "id": "exampleComponent"
+    }
+}

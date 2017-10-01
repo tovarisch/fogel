@@ -18,11 +18,11 @@ module.exports = {
     outputPath: "",
 
     addList: function (listData) {
-        if (!list.__options__ || !list.__options__.name) {
+        if (!listData.__name) {
             throw new Error("No name specified in list");
         }
 
-        this.lists[list.__options__.name] = listData;
+        this.lists[listData.__name] = listData;
     },
 
     addType: function (typeData) {

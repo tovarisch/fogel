@@ -1,0 +1,6 @@
+{
+    __name: "exampleComponent"
+    "field_1": {
+        "type": "float"
+    }
+}

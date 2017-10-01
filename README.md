@@ -1,2 +1,2 @@
-# ogedl
-Open Game Entity Description Language
+# fogel
+Free Open Game Entity Language
