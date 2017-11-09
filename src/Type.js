@@ -1,9 +1,22 @@
+var lodash = require("lodash");
 var util = require("util");
+var TypeField = require("./TypeField.js");
 
 var Type = function Type(typeData) {
-    if (!barData.__name) {
+    if (!typeData.__name) {
         throw new Error("No name field in Type: " + util.inspect(typeData));
     }
-}
 
-module.exports = Bar;
+    this.name       = typeData.__name;
+    this.fields     = {};
+    this.__typeData = typeData;
+};
+
+Type.prototype.settleReferences = function settleReferences() {
+    lodash.forOwn(this.__typeData, (value, key) => {
+        this.fields[key] = new TypeField(value);
+        this.fields[key].settleReferences();
+    });
+};
+
+module.exports = Type;

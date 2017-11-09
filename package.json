@@ -1,5 +1,5 @@
 {
-  "name": "ogedl",
+  "name": "fogel",
   "version": "0.0.1",
   "description": "Open Game Entity Description Language",
   "main": "index.js",
@@ -8,14 +8,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/tovarisch/ogedl.git"
+    "url": "git+https://github.com/tovarisch/fogel.git"
   },
   "author": "Leonid Schekotihin",
   "license": "GPL-3.0",
   "bugs": {
-    "url": "https://github.com/tovarisch/ogedl/issues"
+    "url": "https://github.com/tovarisch/fogel/issues"
   },
-  "homepage": "https://github.com/tovarisch/ogedl#readme",
+  "homepage": "https://github.com/tovarisch/fogel#readme",
   "dependencies": {
     "async": "^2.5.0",
     "colors": "^1.1.2",

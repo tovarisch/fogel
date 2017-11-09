@@ -10,10 +10,10 @@ var domain    = require("domain").create();
 var gatherFiles = function (folderPath, callback) {
     var listsFiles  = [];
     var typesFiles  = [];
-    var barsFiles   = [];
+    var blanksFiles   = [];
 
     async.waterfall([
-        function () {
+        function (next) {
             fs.readdir(folderPath, next);
         },
         function (files, next) {
@@ -28,51 +28,46 @@ var gatherFiles = function (folderPath, callback) {
 
                     if(stat.isFile()) {
                         if (fileName.slice(-5) === ".list") {
-                            listsFiles.push(filePath);                            
+                            listsFiles.push(filePath);
                         }
                         else if (fileName.slice(-5) === ".type") {
                             typesFiles.push(filePath);
                         }
-                        else if (fileName.slice(-4) === ".bar") {
-                            barsFiles.push(filePath);
+                        else if (fileName.slice(-4) === ".blank") {
+                            blanksFiles.push(filePath);
                         }
 
                         next();
                         return;
                     }
                     else if(stat.isDirectory()){
-                        gatherFiles(filePath, function (error, files) {
+                        gatherFiles(filePath, function (error, _listsFiles, _typesFiles, _blanksFiles) {
                             if (error) {
                                 next(error);
                                 return;
                             }
                             else {
-                                foundFiles = foundFiles.concat(files);
+                                listsFiles = listsFiles.concat(_listsFiles);
+                                typesFiles = typesFiles.concat(_typesFiles);
+                                blanksFiles = blanksFiles.concat(_blanksFiles);
+
                                 next();
                                 return;
                             }
                         });
                     }
-                } );
-
+                });
             }, function (error) {
                 if (error) {
                     next(error);
                 }
                 else {
-                    next(null, foundFiles);
+                    next();
                 }
             });
         },
-        function (files, next) {
-            var jsonFiles = [];
-
-            files.forEach(function (fileName) {
-                if (fileName.slice(-4) === "json") {
-                    jsonFiles.push(fileName);
-                }
-            });
-            next(null, listsFiles, typesFiles, barsFiles);
+        function (next) {
+            next(null, listsFiles, typesFiles, blanksFiles);
         }
     ], callback);
 };
@@ -83,16 +78,16 @@ domain.enter();
 function main() {
     var listsFiles = [];
     var typesFiles = [];
-    var barsFiles = [];
-    
+    var blanksFiles = [];
+
     console.log(colors.rainbow("Start processing..."));
-    
+
     Storage.outputPath = process.argv[0];
-    
+
     async.waterfall([
         function (next) {
             async.eachOf(process.argv, function (path, index, next) {
-                if (index === 0) {
+                if (index === 0 || index === (process.argv.length -1)) {
                     next();
                     return;
                 }
@@ -105,24 +100,24 @@ function main() {
 
                     listsFiles = listsFiles.concat(foundListsFiles);
                     typesFiles = typesFiles.concat(foundTypesFiles);
-                    barsFiles = barsFiles.concat(foundBarsFiles);
+                    blanksFiles = blanksFiles.concat(foundBarsFiles);
 
                     next();
                 });
-            }, next)
+            }, next);
         },
         function (next) {
-            console.log(colors.cyan("> loading enums"));
+            console.log(colors.cyan("> loading lists"));
 
-            for (filePath of listsFiles)
+            for (let filePath of listsFiles)
             {
                 try {
                     var fileContent = JSON.parse(stripJsonComments(fs.readFileSync(filePath).toString()));
 
-                    Storage.addList(new Prototype(prototypeJSON));                    
+                    Storage.addList(fileContent);
                 } catch (error) {
                     next("Error on parsing file " + filePath + " catch: " + error);
-                    break;
+                    return;
                 }
             }
 
@@ -131,38 +126,40 @@ function main() {
         function (next) {
             console.log(colors.cyan("> loading types"));
 
-            for (filePath of typesFiles)
+            for (let filePath of typesFiles)
             {
                 try {
                     var fileContent = JSON.parse(stripJsonComments(fs.readFileSync(filePath).toString()));
 
-                    Storage.addType(new Prototype(prototypeJSON));                    
+                    Storage.addType(fileContent);
                 } catch (error) {
                     next("Error on parsing file " + filePath + " catch: " + error);
-                    break;
+                    return;
                 }
             }
 
             next();
         },
         function (next) {
-            console.log(colors.cyan("> loading bars"));
+            console.log(colors.cyan("> loading blanks"));
 
-            for (filePath of barsFiles)
+            for (let filePath of blanksFiles)
             {
                 try {
                     var fileContent = JSON.parse(stripJsonComments(fs.readFileSync(filePath).toString()));
-                
-                    Storage.addBar(new Prototype(prototypeJSON));                    
+
+                    Storage.addBlank(fileContent);
                 } catch (error) {
                     next("Error on parsing file " + filePath + " catch: " + error);
-                    break;
+                    return;
                 }
             }
 
             next();
         },
         function (next) {
+            console.log(colors.cyan("> start settle references"));
+            Storage.settleReferences();
             console.log(colors.cyan("> start code generation"));
             Storage.generateSource();
             next();

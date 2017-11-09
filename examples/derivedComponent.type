@@ -1,6 +1,6 @@
 {
-    __name: "exampleComponent"
-    __baseType: "baseComponent",
+    "__name": "exampleComponent",
+    "__baseType": "baseComponent",
     "field_2": {
         "type": "bool"
     }
