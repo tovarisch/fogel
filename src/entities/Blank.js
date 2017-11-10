@@ -1,7 +1,7 @@
-var Storage         = require("./Storage.js");
+var Storage         = require("../Storage.js");
 var util            = require("util");
 var lodash          = require("lodash");
-var reservedKeys    = require("./reservedKeys.js");
+var reservedKeys    = require("../reservedKeys.js");
 var BlankField        = require("./BlankField.js");
 
 var Blank = function Blank(blankData) {

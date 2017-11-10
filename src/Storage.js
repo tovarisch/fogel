@@ -1,52 +1,42 @@
-var lodash            = require("lodash");
-var fs                = require("fs");
-var os                = require("os");
-var colors            = require("colors");
-var path              = require("path");
-var util              = require("util");
+var lodash = require("lodash");
 
-var Type = require("./Type.js");
-var Blank = require("./Blank.js");
-var List = require("./List.js");
 var _String = require("./builtinTypes/_String.js");
+var Reference = require("./builtinTypes/Reference.js");
+var List = require("./builtinTypes/List.js");
+var Numeric = require("./builtinTypes/Numeric.js");
 
-module.exports = {
-    lists: {},
+var Storage = {
+    tables: {},
 
     types: {},
 
     blanks: {},
 
-    outputPath: "", //@TODO
-
-    isInitialized: false,
-
-    addList: function addList(listData) {
-        if (this.isInitialized) {
-            throw new Error("Adding new list while storage is initialized; list: " + listData);
+    /**
+     * @function addTable
+     * @param  {type} tableData {description}
+     * @return {type} {description}
+     */
+    addTable: function addTable(table) {
+        if (this.tables[table.name]) {
+            throw new Error("Enum already exists: " + table);
         }
 
-        var list = new List(listData);
-
-        this.lists[list.name] = list;
+        this.tables[table.name] = table;
     },
 
-    addType: function addType(typeData) {
-        if (this.isInitialized) {
-            throw new Error("Adding new type while storage is initialized; type: " + typeData);
+    addType: function addType(type) {
+        if (this.types[type.name]) {
+            throw new Error("Type already exists: " + type);
         }
-
-        var type = new Type(typeData);
 
         this.types[type.name] = type;
     },
 
-    addBlank: function addBlank(blankData) {
-        if (this.isInitialized) {
-            throw new Error("Adding new blank while storage is initialized; blank: " + blankData);
+    addBlank: function addBlank(blank) {
+        if (this.blanks[blank.name]) {
+            throw new Error("Blank already exists: " + blank);
         }
-
-        var blank = new Blank(blankData);
 
         this.blanks[blank.name] = blank;
     },
@@ -54,8 +44,8 @@ module.exports = {
     settleReferences: function settle() {
         this.isInitialized = true;
 
-        lodash.forOwn(this.lists, (list) => {
-            list.settleReferences();
+        lodash.forOwn(this.tables, (table) => {
+            table.settleReferences();
         });
 
         lodash.forOwn(this.types, (type) => {
@@ -73,27 +63,28 @@ module.exports = {
                 {
                     return new _String();
                 }
+            case "reference":
+                {
+                    return new Reference();
+                }
+            case "list":
+                {
+                    return new List();
+                }
+            case "uint32":
+                {
+                    return new Numeric("uint32");
+                }
             default:
                 {
-                    throw new Error("No type found: " + name);
+                    if (this.types[name]) {
+                        return this.types[name];
+                    } else {
+                        throw new Error("No type found: " + name);
+                    }
                 }
         }
-    },
-
-    generateSource: function generateSource() {
-        this.generateClasses();
-        this.generateFabric();
-    },
-
-    generateClasses: function generateClasses() {
-        this.blanks.forEach((blank) => {
-            var text = blank.generateClass();
-
-            fs.writeFileSync(this.outputPath + "/" + blank.getClassFileName() + ".js", text);
-        });
-    },
-
-    generateFabric: function generateFabric() {
-
     }
 };
+
+module.exports = Storage;

@@ -1,14 +1,24 @@
-var async              = require("async");
-var colors             = require("colors");
-var fs                 = require("fs");
-var path               = require("path");
-var stripJsonComments  = require("strip-json-comments");
+var lo                    = require("lodash");
+var async                 = require("async");
+var colors                = require("colors");
+var fs                    = require("fs");
+var path                  = require("path");
+var stripJsonComments     = require("strip-json-comments");
+var argumentsParser       = require('command-line-args')
+var argumentsDefinitions  = [
+    { name: 'config', alias: 'c', type: String },
+    { name: 'output', alias: 'o', type: String},
+    { name: 'input', alias: 'i', type: String, multiple: true }
+];
 
-var Storage   = require("./src/Storage.js");
-var domain    = require("domain").create();
+var Storage     = require("./src/Storage.js");
+var Processor   = require("./src/Processor.js");
+var Type = require("./src/entities/Type.js");
+var Blank = require("./src/entities/Blank.js");
+var Table = require("./src/entities/Table.js");
 
 var gatherFiles = function (folderPath, callback) {
-    var listsFiles  = [];
+    var tablesFiles  = [];
     var typesFiles  = [];
     var blanksFiles   = [];
 
@@ -27,8 +37,8 @@ var gatherFiles = function (folderPath, callback) {
                     }
 
                     if(stat.isFile()) {
-                        if (fileName.slice(-5) === ".list") {
-                            listsFiles.push(filePath);
+                        if (fileName.slice(-5) === ".table") {
+                            tablesFiles.push(filePath);
                         }
                         else if (fileName.slice(-5) === ".type") {
                             typesFiles.push(filePath);
@@ -41,13 +51,13 @@ var gatherFiles = function (folderPath, callback) {
                         return;
                     }
                     else if(stat.isDirectory()){
-                        gatherFiles(filePath, function (error, _listsFiles, _typesFiles, _blanksFiles) {
+                        gatherFiles(filePath, function (error, _tablesFiles, _typesFiles, _blanksFiles) {
                             if (error) {
                                 next(error);
                                 return;
                             }
                             else {
-                                listsFiles = listsFiles.concat(_listsFiles);
+                                tablesFiles = tablesFiles.concat(_tablesFiles);
                                 typesFiles = typesFiles.concat(_typesFiles);
                                 blanksFiles = blanksFiles.concat(_blanksFiles);
 
@@ -67,38 +77,50 @@ var gatherFiles = function (folderPath, callback) {
             });
         },
         function (next) {
-            next(null, listsFiles, typesFiles, blanksFiles);
+            next(null, tablesFiles, typesFiles, blanksFiles);
         }
     ], callback);
 };
 
-domain.enter();
-
 //call start
 function main() {
-    var listsFiles = [];
-    var typesFiles = [];
-    var blanksFiles = [];
+    var tablesFiles     = [];
+    var typesFiles      = [];
+    var blanksFiles     = [];
+    var parsedArguments = argumentsParser(argumentsDefinitions);
+    var input           = null;
+
+    if (lo.isString(parsedArguments.config)) {
+        let config = JSON.parse(fs.readFileSync(parsedArguments.config));
+
+        if (!lo.isArray(config.input)) {
+            throw new Error("No input in config file");
+        }
+
+        if (!lo.isString(config.output)) {
+            throw new Error("No output in config file");
+        }
+
+        input                   = config.input;
+        Processor.outputPath    = config.output;
+    } else {
+        input                   = parsedArguments.input;
+        Processor.outputPath    = parsedArguments.output;
+    }
 
     console.log(colors.rainbow("Start processing..."));
 
-    Storage.outputPath = process.argv[0];
-
     async.waterfall([
         function (next) {
-            async.eachOf(process.argv, function (path, index, next) {
-                if (index === 0 || index === (process.argv.length -1)) {
-                    next();
-                    return;
-                }
+            async.eachOf(input, function (path, index, next) {
 
-                gatherFiles(path, function (error, foundListsFiles, foundTypesFiles, foundBarsFiles) {
+                gatherFiles(path, function (error, foundTablesFiles, foundTypesFiles, foundBarsFiles) {
                     if (error) {
                         next(error);
                         return;
                     }
 
-                    listsFiles = listsFiles.concat(foundListsFiles);
+                    tablesFiles = tablesFiles.concat(foundTablesFiles);
                     typesFiles = typesFiles.concat(foundTypesFiles);
                     blanksFiles = blanksFiles.concat(foundBarsFiles);
 
@@ -107,14 +129,14 @@ function main() {
             }, next);
         },
         function (next) {
-            console.log(colors.cyan("> loading lists"));
+            console.log(colors.cyan("> loading tables"));
 
-            for (let filePath of listsFiles)
+            for (let filePath of tablesFiles)
             {
                 try {
                     var fileContent = JSON.parse(stripJsonComments(fs.readFileSync(filePath).toString()));
 
-                    Storage.addList(fileContent);
+                    Storage.addTable(new Table(fileContent));
                 } catch (error) {
                     next("Error on parsing file " + filePath + " catch: " + error);
                     return;
@@ -131,7 +153,7 @@ function main() {
                 try {
                     var fileContent = JSON.parse(stripJsonComments(fs.readFileSync(filePath).toString()));
 
-                    Storage.addType(fileContent);
+                    Storage.addType(new Type(fileContent));
                 } catch (error) {
                     next("Error on parsing file " + filePath + " catch: " + error);
                     return;
@@ -148,7 +170,7 @@ function main() {
                 try {
                     var fileContent = JSON.parse(stripJsonComments(fs.readFileSync(filePath).toString()));
 
-                    Storage.addBlank(fileContent);
+                    Storage.addBlank(new Blank(fileContent));
                 } catch (error) {
                     next("Error on parsing file " + filePath + " catch: " + error);
                     return;
@@ -161,7 +183,7 @@ function main() {
             console.log(colors.cyan("> start settle references"));
             Storage.settleReferences();
             console.log(colors.cyan("> start code generation"));
-            Storage.generateSource();
+            Processor.generateSource(Storage);
             next();
         }
     ], function (error) {
